@@ -1,0 +1,825 @@
+{
+  "project": "pg-mcp",
+  "target": "pg_mcp.services.sql_validator.SQLValidator",
+  "timestamp": "2026-10-08T13:58:06",
+  "duration_ms": 96.9,
+  "summary": {
+    "total": 77,
+    "passed": 77,
+    "failed": 0
+  },
+  "categories": {
+    "valid": {
+      "title": "1. 合法查询放行",
+      "total": 16,
+      "passed": 16
+    },
+    "write": {
+      "title": "2. 写操作拦截",
+      "total": 15,
+      "passed": 15
+    },
+    "injection": {
+      "title": "3. SQL 注入防护",
+      "total": 6,
+      "passed": 6
+    },
+    "function": {
+      "title": "4. 危险函数拦截",
+      "total": 15,
+      "passed": 15
+    },
+    "acl": {
+      "title": "5. 敏感表/列控制",
+      "total": 10,
+      "passed": 10
+    },
+    "explain": {
+      "title": "6. EXPLAIN 策略",
+      "total": 5,
+      "passed": 5
+    },
+    "edge": {
+      "title": "7. 边界与畸形输入",
+      "total": 7,
+      "passed": 7
+    },
+    "subquery": {
+      "title": "8. 子查询安全",
+      "total": 3,
+      "passed": 3
+    }
+  },
+  "cases": [
+    {
+      "id": "SEC-V-001",
+      "category": "valid",
+      "name": "简单全表查询",
+      "sql": "SELECT * FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 5.61,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-002",
+      "category": "valid",
+      "name": "带 WHERE 条件",
+      "sql": "SELECT id, name FROM users WHERE age > 18",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.44,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-003",
+      "category": "valid",
+      "name": "INNER JOIN 连接查询",
+      "sql": "SELECT u.name, o.total FROM users u INNER JOIN orders o ON u.id = o.user_id",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.43,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-004",
+      "category": "valid",
+      "name": "WHERE 子查询",
+      "sql": "SELECT name FROM users WHERE id IN (SELECT user_id FROM orders WHERE total > 100)",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.68,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-005",
+      "category": "valid",
+      "name": "FROM 派生表",
+      "sql": "SELECT t.name, t.cnt FROM (SELECT name, COUNT(*) AS cnt FROM users GROUP BY name) t",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.66,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-006",
+      "category": "valid",
+      "name": "CTE 公共表表达式",
+      "sql": "WITH stats AS (SELECT user_id, COUNT(*) AS c FROM orders GROUP BY user_id) SELECT u.name, s.c FROM users u JOIN stats s ON u.id = s.user_id",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.72,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-007",
+      "category": "valid",
+      "name": "聚合 + HAVING",
+      "sql": "SELECT category, COUNT(*), AVG(price) FROM products GROUP BY category HAVING COUNT(*) > 5 ORDER BY 2 DESC",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.48,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-008",
+      "category": "valid",
+      "name": "窗口函数",
+      "sql": "SELECT name, ROW_NUMBER() OVER (ORDER BY salary DESC) FROM employees",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 2.16,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-009",
+      "category": "valid",
+      "name": "UNION 集合查询",
+      "sql": "SELECT id FROM users UNION SELECT id FROM orders",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.52,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-010",
+      "category": "valid",
+      "name": "CASE 表达式",
+      "sql": "SELECT name, CASE WHEN age < 18 THEN 'minor' ELSE 'adult' END FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.4,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-011",
+      "category": "valid",
+      "name": "时间区间过滤",
+      "sql": "SELECT * FROM orders WHERE created_at > NOW() - INTERVAL '30 days'",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.37,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-012",
+      "category": "valid",
+      "name": "ILIKE 模糊搜索",
+      "sql": "SELECT * FROM users WHERE first_name ILIKE '%john%'",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.23,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-013",
+      "category": "valid",
+      "name": "安全内置函数",
+      "sql": "SELECT COALESCE(nickname, name, 'unknown'), EXTRACT(YEAR FROM created_at) FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.38,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-014",
+      "category": "valid",
+      "name": "常量查询",
+      "sql": "SELECT 1",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.12,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-015",
+      "category": "valid",
+      "name": "结尾分号（单语句）",
+      "sql": "SELECT * FROM users;",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": ""
+    },
+    {
+      "id": "SEC-V-016",
+      "category": "valid",
+      "name": "含注释的查询",
+      "sql": "-- 查询活跃用户\nSELECT id FROM users WHERE active = true -- 行内注释",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.25,
+      "message": ""
+    },
+    {
+      "id": "SEC-W-001",
+      "category": "write",
+      "name": "INSERT 插入",
+      "sql": "INSERT INTO users (name) VALUES ('hacker')",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.23,
+      "message": "INSERT statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-002",
+      "category": "write",
+      "name": "UPDATE 更新",
+      "sql": "UPDATE users SET name = 'x' WHERE id = 1",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.25,
+      "message": "UPDATE statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-003",
+      "category": "write",
+      "name": "DELETE 删除",
+      "sql": "DELETE FROM users WHERE id = 1",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.18,
+      "message": "DELETE statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-004",
+      "category": "write",
+      "name": "DROP TABLE 删表",
+      "sql": "DROP TABLE users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.23,
+      "message": "DROP statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-005",
+      "category": "write",
+      "name": "DROP DATABASE 删库",
+      "sql": "DROP DATABASE prod",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.15,
+      "message": "DROP statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-006",
+      "category": "write",
+      "name": "CREATE 建表",
+      "sql": "CREATE TABLE t (id INT)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.32,
+      "message": "CREATE statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-007",
+      "category": "write",
+      "name": "ALTER 改表",
+      "sql": "ALTER TABLE users ADD COLUMN age INT",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.24,
+      "message": "ALTER statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-008",
+      "category": "write",
+      "name": "GRANT 授权",
+      "sql": "GRANT SELECT ON users TO public",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.17,
+      "message": "GRANT statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-009",
+      "category": "write",
+      "name": "REVOKE 收权",
+      "sql": "REVOKE SELECT ON users FROM public",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.17,
+      "message": "REVOKE statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-010",
+      "category": "write",
+      "name": "MERGE 合并",
+      "sql": "MERGE INTO users USING src ON users.id = src.id WHEN MATCHED THEN UPDATE SET name = src.name",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.35,
+      "message": "MERGE statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-011",
+      "category": "write",
+      "name": "TRUNCATE 清表",
+      "sql": "TRUNCATE TABLE users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.13,
+      "message": "Statement type TruncateTable is not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-012",
+      "category": "write",
+      "name": "VACUUM 维护命令",
+      "sql": "VACUUM users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.13,
+      "message": "Command 'VACUUM' is not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-013",
+      "category": "write",
+      "name": "COPY 导出文件",
+      "sql": "COPY users TO '/tmp/leak.csv'",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Statement type Copy is not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-014",
+      "category": "write",
+      "name": "SET 会话变量",
+      "sql": "SET search_path = evil_schema",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.19,
+      "message": "SET statements are not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-W-015",
+      "category": "write",
+      "name": "LISTEN 监听",
+      "sql": "LISTEN channel",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.13,
+      "message": "Statement type Alias is not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-I-001",
+      "category": "injection",
+      "name": "堆叠注入 + DROP",
+      "sql": "SELECT * FROM users; DROP TABLE users;--",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.24,
+      "message": "Multiple statements not allowed. Only single SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-I-002",
+      "category": "injection",
+      "name": "堆叠注入 + DELETE",
+      "sql": "SELECT * FROM users WHERE id = 1; DELETE FROM users;--",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.29,
+      "message": "Multiple statements not allowed. Only single SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-I-003",
+      "category": "injection",
+      "name": "堆叠注入 + INSERT",
+      "sql": "SELECT * FROM users; INSERT INTO logs VALUES (1, 'hacked');",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.28,
+      "message": "Multiple statements not allowed. Only single SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-I-004",
+      "category": "injection",
+      "name": "多语句 SELECT",
+      "sql": "SELECT 1; SELECT 2",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.28,
+      "message": "Multiple statements not allowed. Only single SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-I-005",
+      "category": "injection",
+      "name": "UPDATE 与 SELECT 混合",
+      "sql": "UPDATE users SET name = 'x' WHERE id = 1; SELECT 1",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.44,
+      "message": "Multiple statements not allowed. Only single SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-I-006",
+      "category": "injection",
+      "name": "恒真条件 OR 1=1（已知限制，执行层兜底）",
+      "sql": "SELECT * FROM users WHERE id = 1 OR 1=1",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.29,
+      "message": ""
+    },
+    {
+      "id": "SEC-F-001",
+      "category": "function",
+      "name": "pg_sleep 拖垮连接",
+      "sql": "SELECT pg_sleep(10)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.18,
+      "message": "Function 'pg_sleep' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-002",
+      "category": "function",
+      "name": "pg_read_file 读文件",
+      "sql": "SELECT pg_read_file('/etc/passwd')",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Function 'pg_read_file' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-003",
+      "category": "function",
+      "name": "pg_read_binary_file",
+      "sql": "SELECT pg_read_binary_file('/etc/shadow')",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.17,
+      "message": "Function 'pg_read_binary_file' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-004",
+      "category": "function",
+      "name": "pg_ls_dir 列目录",
+      "sql": "SELECT * FROM pg_ls_dir('/tmp')",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.21,
+      "message": "Function 'pg_ls_dir' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-005",
+      "category": "function",
+      "name": "lo_import 大对象导入",
+      "sql": "SELECT lo_import('/tmp/f.txt')",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Function 'lo_import' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-006",
+      "category": "function",
+      "name": "lo_export 大对象导出",
+      "sql": "SELECT lo_export(1, '/tmp/f.txt')",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.17,
+      "message": "Function 'lo_export' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-007",
+      "category": "function",
+      "name": "dblink 跨库攻击",
+      "sql": "SELECT * FROM dblink('host=remote', 'SELECT 1') AS t(id INT)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.28,
+      "message": "Function 'dblink' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-008",
+      "category": "function",
+      "name": "pg_terminate_backend",
+      "sql": "SELECT pg_terminate_backend(12345)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.17,
+      "message": "Function 'pg_terminate_backend' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-009",
+      "category": "function",
+      "name": "pg_cancel_backend",
+      "sql": "SELECT pg_cancel_backend(12345)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.19,
+      "message": "Function 'pg_cancel_backend' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-010",
+      "category": "function",
+      "name": "pg_reload_conf",
+      "sql": "SELECT pg_reload_conf()",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.2,
+      "message": "Function 'pg_reload_conf' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-011",
+      "category": "function",
+      "name": "大写绕过尝试 PG_SLEEP",
+      "sql": "SELECT PG_SLEEP(10)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 3.01,
+      "message": "Function 'pg_sleep' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-012",
+      "category": "function",
+      "name": "子查询中调用危险函数",
+      "sql": "SELECT * FROM users WHERE id IN (SELECT 1 WHERE pg_sleep(1) IS NULL)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.57,
+      "message": "Function 'pg_sleep' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-013",
+      "category": "function",
+      "name": "CTE 中调用危险函数",
+      "sql": "WITH t AS (SELECT pg_read_file('/etc/passwd') AS f) SELECT * FROM t",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.41,
+      "message": "Function 'pg_read_file' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-014",
+      "category": "function",
+      "name": "自定义黑名单函数",
+      "sql": "SELECT my_custom_func(123)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Function 'my_custom_func' is blocked for security reasons"
+    },
+    {
+      "id": "SEC-F-015",
+      "category": "function",
+      "name": "未列入黑名单的安全函数放行",
+      "sql": "SELECT COUNT(*), UPPER(name) FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.3,
+      "message": ""
+    },
+    {
+      "id": "SEC-A-001",
+      "category": "acl",
+      "name": "黑名单表直查",
+      "sql": "SELECT * FROM passwords",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.17,
+      "message": "Access to table 'passwords' is not allowed"
+    },
+    {
+      "id": "SEC-A-002",
+      "category": "acl",
+      "name": "黑名单表 JOIN",
+      "sql": "SELECT u.name FROM users u JOIN secrets s ON u.id = s.user_id",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.32,
+      "message": "Access to table 'secrets' is not allowed"
+    },
+    {
+      "id": "SEC-A-003",
+      "category": "acl",
+      "name": "黑名单表出现在子查询",
+      "sql": "SELECT * FROM users WHERE id IN (SELECT id FROM api_keys)",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.31,
+      "message": "Access to table 'api_keys' is not allowed"
+    },
+    {
+      "id": "SEC-A-004",
+      "category": "acl",
+      "name": "黑名单表大写绕过尝试",
+      "sql": "SELECT * FROM PASSWORDS",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Access to table 'passwords' is not allowed"
+    },
+    {
+      "id": "SEC-A-005",
+      "category": "acl",
+      "name": "非黑名单表正常放行",
+      "sql": "SELECT * FROM users WHERE id IN (SELECT user_id FROM orders)",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.32,
+      "message": ""
+    },
+    {
+      "id": "SEC-A-006",
+      "category": "acl",
+      "name": "黑名单列查询",
+      "sql": "SELECT id, name, password FROM users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.24,
+      "message": "Access to column 'password' is not allowed"
+    },
+    {
+      "id": "SEC-A-007",
+      "category": "acl",
+      "name": "黑名单列出现在 WHERE",
+      "sql": "SELECT id FROM users WHERE password = 'x'",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.24,
+      "message": "Access to column 'password' is not allowed"
+    },
+    {
+      "id": "SEC-A-008",
+      "category": "acl",
+      "name": "黑名单列大小写归一",
+      "sql": "SELECT id, SECRET_KEY FROM users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 2.58,
+      "message": "Access to column 'secret_key' is not allowed"
+    },
+    {
+      "id": "SEC-A-009",
+      "category": "acl",
+      "name": "限定名 table.column 黑名单",
+      "sql": "SELECT users.id, users.ssn FROM users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.25,
+      "message": "Access to column 'users.ssn' is not allowed"
+    },
+    {
+      "id": "SEC-A-010",
+      "category": "acl",
+      "name": "列名部分匹配不误伤（精确匹配策略）",
+      "sql": "SELECT id, password_hash FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.2,
+      "message": ""
+    },
+    {
+      "id": "SEC-E-001",
+      "category": "explain",
+      "name": "默认拒绝 EXPLAIN",
+      "sql": "EXPLAIN SELECT * FROM users",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.1,
+      "message": "EXPLAIN statements are not allowed"
+    },
+    {
+      "id": "SEC-E-002",
+      "category": "explain",
+      "name": "开启后放行 EXPLAIN",
+      "sql": "EXPLAIN SELECT * FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.08,
+      "message": ""
+    },
+    {
+      "id": "SEC-E-003",
+      "category": "explain",
+      "name": "开启后放行 EXPLAIN ANALYZE",
+      "sql": "EXPLAIN ANALYZE SELECT * FROM users WHERE id > 100",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.1,
+      "message": ""
+    },
+    {
+      "id": "SEC-E-004",
+      "category": "explain",
+      "name": "EXPLAIN DELETE 安全（只看计划不执行）",
+      "sql": "EXPLAIN DELETE FROM users",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.08,
+      "message": ""
+    },
+    {
+      "id": "SEC-E-005",
+      "category": "explain",
+      "name": "其他 Command 拒绝（CHECKPOINT）",
+      "sql": "CHECKPOINT",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.07,
+      "message": "Statement type Column is not allowed. Only SELECT queries are permitted."
+    },
+    {
+      "id": "SEC-G-001",
+      "category": "edge",
+      "name": "空字符串",
+      "sql": "",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.01,
+      "message": "SQL query cannot be empty"
+    },
+    {
+      "id": "SEC-G-002",
+      "category": "edge",
+      "name": "纯空白字符",
+      "sql": "   \n\t  ",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.01,
+      "message": "SQL query cannot be empty"
+    },
+    {
+      "id": "SEC-G-003",
+      "category": "edge",
+      "name": "纯注释",
+      "sql": "-- 只有一行注释",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.06,
+      "message": "No valid SQL statement found"
+    },
+    {
+      "id": "SEC-G-004",
+      "category": "edge",
+      "name": "纯块注释",
+      "sql": "/* 块注释 */",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.06,
+      "message": "No valid SQL statement found"
+    },
+    {
+      "id": "SEC-G-005",
+      "category": "edge",
+      "name": "残缺语句",
+      "sql": "SELECT * FROM",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Failed to parse SQL: Expected table name but got <Token token_type: TokenType.SENTINEL, text: SENTINEL, line: 1, col: 1, start: 0, end: 0, comments: []>. Line 1, Col: 13.\n  SELECT * \u001b[4mFROM\u001b[0m"
+    },
+    {
+      "id": "SEC-G-006",
+      "category": "edge",
+      "name": "语法错误",
+      "sql": "SELECT * FROM WHERE",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.16,
+      "message": "Failed to parse SQL: Expected table name but got <Token token_type: TokenType.WHERE, text: WHERE, line: 1, col: 19, start: 14, end: 18, comments: []>. Line 1, Col: 19.\n  SELECT * FROM \u001b[4mWHERE\u001b[0m"
+    },
+    {
+      "id": "SEC-G-007",
+      "category": "edge",
+      "name": "非 SQL 文本",
+      "sql": "INVALID SQL QUERY",
+      "expect": "block",
+      "passed": true,
+      "duration_ms": 0.1,
+      "message": "Failed to parse SQL: Invalid expression / Unexpected token. Line 1, Col: 17.\n  INVALID SQL \u001b[4mQUERY\u001b[0m"
+    },
+    {
+      "id": "SEC-S-001",
+      "category": "subquery",
+      "name": "EXISTS 子查询放行",
+      "sql": "SELECT name FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.37,
+      "message": ""
+    },
+    {
+      "id": "SEC-S-002",
+      "category": "subquery",
+      "name": "多层嵌套 SELECT 放行",
+      "sql": "SELECT name FROM users WHERE id IN (SELECT user_id FROM orders WHERE product_id IN (SELECT id FROM products WHERE category = 'electronics'))",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.94,
+      "message": ""
+    },
+    {
+      "id": "SEC-S-003",
+      "category": "subquery",
+      "name": "CTE + 标量子查询组合放行",
+      "sql": "WITH recent AS (SELECT user_id, total FROM orders WHERE created_at > NOW() - INTERVAL '30 days') SELECT u.name, (SELECT SUM(total) FROM recent WHERE user_id = u.id) FROM users u",
+      "expect": "allow",
+      "passed": true,
+      "duration_ms": 0.92,
+      "message": ""
+    }
+  ]
+}
